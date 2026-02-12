@@ -60,6 +60,12 @@
       opacity: 0.6;
       cursor: default;
     }
+    button.delete-btn {
+      background: #d00;
+    }
+    button.edit-btn {
+      background: #f90;
+    }
     .msg {
       margin-top: 8px;
       font-size: 13px;
@@ -73,6 +79,55 @@
     }
     li {
       margin-bottom: 4px;
+    }
+    .item-actions {
+      margin-top: 6px;
+      font-size: 13px;
+    }
+    .item-actions button {
+      padding: 4px 8px;
+      font-size: 12px;
+      margin-right: 4px;
+    }
+
+    /* Modálne okno */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      max-width: 500px;
+      width: 90%;
+    }
+    .modal-header {
+      margin-bottom: 16px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .modal-footer {
+      margin-top: 16px;
+      text-align: right;
+    }
+    .modal-footer button {
+      margin-left: 8px;
+    }
+    .modal-footer button.cancel-btn {
+      background: #999;
     }
   </style>
 </head>
@@ -135,26 +190,36 @@
       <ul id="roundList"></ul>
     </section>
 
-<section>
-  <h2>Výsledky v kategórii</h2>
+    <section>
+      <h2>Výsledky v kategórii</h2>
 
-  <label for="resultsContestSelect">Súťaž</label>
-  <select id="resultsContestSelect"></select>
+      <label for="resultsContestSelect">Súťaž</label>
+      <select id="resultsContestSelect"></select>
 
-  <label for="resultsRoundSelect">Kolo</label>
-  <select id="resultsRoundSelect"></select>
+      <label for="resultsRoundSelect">Kolo</label>
+      <select id="resultsRoundSelect"></select>
 
-  <label for="resultsCategorySelect">Kategória</label>
-  <select id="resultsCategorySelect"></select>
+      <label for="resultsCategorySelect">Kategória</label>
+      <select id="resultsCategorySelect"></select>
 
-  <div id="resultsMsg" class="msg"></div>
+      <div id="resultsMsg" class="msg"></div>
 
-  <h3>Kampane v tejto kategórii</h3>
-  <ul id="resultsEntriesList"></ul>
-</section>
-
-
+      <h3>Kampane v tejto kategórii</h3>
+      <ul id="resultsEntriesList"></ul>
+    </section>
   </main>
+
+  <!-- Modálne okná na úpravy -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header" id="editModalTitle">Upraviť</div>
+      <div id="editModalBody"></div>
+      <div class="modal-footer">
+        <button class="cancel-btn" onclick="closeEditModal()">Zrušiť</button>
+        <button id="editModalSaveBtn" onclick="saveEdit()">Uložiť</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="./admin.js"></script>
 </body>
