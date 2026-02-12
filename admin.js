@@ -31,9 +31,433 @@ const resultsCategorySelect = document.getElementById('resultsCategorySelect');
 const resultsMsgEl = document.getElementById('resultsMsg');
 const resultsEntriesListEl = document.getElementById('resultsEntriesList');
 
+// Modálne okno
+const editModal = document.getElementById('editModal');
+const editModalTitle = document.getElementById('editModalTitle');
+const editModalBody = document.getElementById('editModalBody');
+const editModalSaveBtn = document.getElementById('editModalSaveBtn');
+
+// Globálne stav pre edit
+let editState = {
+  type: null, // 'contest', 'category', 'round', 'entry'
+  id: null,
+  data: {}
+};
+
 function setMessage(el, text, type = 'ok') {
   el.textContent = text;
   el.className = 'msg ' + type;
+}
+
+function showEditModal(title, content) {
+  editModalTitle.textContent = title;
+  editModalBody.innerHTML = content;
+  editModal.classList.add('show');
+}
+
+function closeEditModal() {
+  editModal.classList.remove('show');
+  editState = { type: null, id: null, data: {} };
+}
+
+async function saveEdit() {
+  const { type, id, data } = editState;
+  if (!type || !id) return;
+
+  editModalSaveBtn.disabled = true;
+
+  try {
+    switch (type) {
+      case 'contest': {
+        const name = document.getElementById('editContestName')?.value.trim();
+        const year = document.getElementById('editContestYear')?.value.trim();
+        if (!name) {
+          alert('Názov súťaže je povinný.');
+          editModalSaveBtn.disabled = false;
+          return;
+        }
+        const { error } = await supabase
+          .from('contests')
+          .update({ name, year: year ? parseInt(year, 10) : null })
+          .eq('id', id);
+        if (error) throw error;
+        closeEditModal();
+        await loadContests();
+        setMessage(contestMsgEl, 'Súťaž upravená.', 'ok');
+        break;
+      }
+      case 'category': {
+        const name = document.getElementById('editCategoryName')?.value.trim();
+        if (!name) {
+          alert('Názov kategórie je povinný.');
+          editModalSaveBtn.disabled = false;
+          return;
+        }
+        const { error } = await supabase
+          .from('categories')
+          .update({ name })
+          .eq('id', id);
+        if (error) throw error;
+        closeEditModal();
+        await loadCategoriesForSelectedContest();
+        await loadResultsCategories();
+        setMessage(categoryMsgEl, 'Kategória upravená.', 'ok');
+        break;
+      }
+      case 'round': {
+        const name = document.getElementById('editRoundName')?.value.trim();
+        const startAt = document.getElementById('editRoundStart')?.value
+          ? new Date(document.getElementById('editRoundStart').value).toISOString()
+          : null;
+        const endAt = document.getElementById('editRoundEnd')?.value
+          ? new Date(document.getElementById('editRoundEnd').value).toISOString()
+          : null;
+        if (!name) {
+          alert('Názov kola je povinný.');
+          editModalSaveBtn.disabled = false;
+          return;
+        }
+        const { error } = await supabase
+          .from('rounds')
+          .update({ name, start_at: startAt, end_at: endAt })
+          .eq('id', id);
+        if (error) throw error;
+        closeEditModal();
+        await loadRoundsForSelectedContest();
+        await loadResultsRounds();
+        setMessage(roundMsgEl, 'Kolo upravené.', 'ok');
+        break;
+      }
+      case 'entry': {
+        const title = document.getElementById('editEntryTitle')?.value.trim();
+        const client = document.getElementById('editEntryClient')?.value.trim();
+        const notes = document.getElementById('editEntryNotes')?.value.trim();
+        if (!title) {
+          alert('Názov kampane je povinný.');
+          editModalSaveBtn.disabled = false;
+          return;
+        }
+        const { error } = await supabase
+          .from('entries')
+          .update({ title, client, notes })
+          .eq('id', id);
+        if (error) throw error;
+        closeEditModal();
+        await loadResultsEntries();
+        setMessage(resultsMsgEl, 'Kampaň upravená.', 'ok');
+        break;
+      }
+    }
+  } catch (error) {
+    console.error('saveEdit error:', error);
+    alert('Chyba pri ukladaní: ' + error.message);
+  }
+
+  editModalSaveBtn.disabled = false;
+}
+
+async function deleteContest(contestId, contestName) {
+  if (!confirm(`Naozaj chceš zmazať súťaž "${contestName}"? Vymaže sa všetko (kategórie, kolá, kampane, hlasy)!`)) {
+    return;
+  }
+
+  try {
+    // 1. Zmaž všetky votes pre entries v tejto súťaži
+    const { data: entries } = await supabase
+      .from('entries')
+      .select('id')
+      .eq('contest_id', contestId);
+
+    if (entries && entries.length > 0) {
+      const entryIds = entries.map(e => e.id);
+      await supabase
+        .from('votes')
+        .delete()
+        .in('entry_id', entryIds);
+
+      // 2. Zmaž entries a ich Storage súbory
+      for (const entry of entries) {
+        const { data: entryData } = await supabase
+          .from('entries')
+          .select('creative_url')
+          .eq('id', entry.id)
+          .single();
+        
+        if (entryData?.creative_url) {
+          try {
+            const parts = entryData.creative_url.split('/creatives/');
+            if (parts.length === 2) {
+              await supabase.storage
+                .from('creatives')
+                .remove([parts[1]]);
+            }
+          } catch (e) {
+            console.error('storage remove error:', e);
+          }
+        }
+      }
+
+      await supabase
+        .from('entries')
+        .delete()
+        .eq('contest_id', contestId);
+    }
+
+    // 3. Zmaž všetky rounds v tejto súťaži
+    await supabase
+      .from('rounds')
+      .delete()
+      .eq('contest_id', contestId);
+
+    // 4. Zmaž všetky categories v tejto súťaži
+    await supabase
+      .from('categories')
+      .delete()
+      .eq('contest_id', contestId);
+
+    // 5. Zmaž samotnú súťaž
+    const { error } = await supabase
+      .from('contests')
+      .delete()
+      .eq('id', contestId);
+
+    if (error) throw error;
+
+    setMessage(contestMsgEl, 'Súťaž a všetko viazané bolo zmazané.', 'ok');
+    await loadContests();
+    await loadResultsRounds();
+    await loadResultsCategories();
+    await loadResultsEntries();
+  } catch (error) {
+    console.error('deleteContest error:', error);
+    setMessage(contestMsgEl, 'Chyba pri mazaní: ' + error.message, 'error');
+  }
+}
+
+async function editContest(contestId, currentName, currentYear) {
+  editState = { type: 'contest', id: contestId, data: {} };
+  const content = `
+    <label for="editContestName">Názov súťaže</label>
+    <input id="editContestName" type="text" value="${currentName || ''}" />
+    <label for="editContestYear">Rok</label>
+    <input id="editContestYear" type="number" value="${currentYear || ''}" />
+  `;
+  showEditModal('Upraviť súťaž', content);
+}
+
+async function deleteCategory(categoryId, categoryName) {
+  if (!confirm(`Naozaj chceš zmazať kategóriu "${categoryName}"? Vymaže sa všetko v nej!`)) {
+    return;
+  }
+
+  try {
+    // 1. Zmaž votes pre entries v tejto kategórii
+    const { data: entries } = await supabase
+      .from('entries')
+      .select('id')
+      .eq('category_id', categoryId);
+
+    if (entries && entries.length > 0) {
+      const entryIds = entries.map(e => e.id);
+      await supabase
+        .from('votes')
+        .delete()
+        .in('entry_id', entryIds);
+
+      // 2. Zmaž entries a Storage súbory
+      for (const entry of entries) {
+        const { data: entryData } = await supabase
+          .from('entries')
+          .select('creative_url')
+          .eq('id', entry.id)
+          .single();
+        
+        if (entryData?.creative_url) {
+          try {
+            const parts = entryData.creative_url.split('/creatives/');
+            if (parts.length === 2) {
+              await supabase.storage
+                .from('creatives')
+                .remove([parts[1]]);
+            }
+          } catch (e) {
+            console.error('storage remove error:', e);
+          }
+        }
+      }
+
+      await supabase
+        .from('entries')
+        .delete()
+        .eq('category_id', categoryId);
+    }
+
+    // 3. Zmaž samotnú kategóriu
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', categoryId);
+
+    if (error) throw error;
+
+    setMessage(categoryMsgEl, 'Kategória a všetko viazané bolo zmazané.', 'ok');
+    await loadCategoriesForSelectedContest();
+    await loadResultsCategories();
+    await loadResultsEntries();
+  } catch (error) {
+    console.error('deleteCategory error:', error);
+    setMessage(categoryMsgEl, 'Chyba pri mazaní: ' + error.message, 'error');
+  }
+}
+
+async function editCategory(categoryId, currentName) {
+  editState = { type: 'category', id: categoryId, data: {} };
+  const content = `
+    <label for="editCategoryName">Názov kategórie</label>
+    <input id="editCategoryName" type="text" value="${currentName || ''}" />
+  `;
+  showEditModal('Upraviť kategóriu', content);
+}
+
+async function deleteRound(roundId, roundName) {
+  if (!confirm(`Naozaj chceš zmazať kolo "${roundName}"? Vymaže sa všetko v ňom!`)) {
+    return;
+  }
+
+  try {
+    // 1. Zmaž votes pre entries v tomto kole
+    const { data: entries } = await supabase
+      .from('entries')
+      .select('id')
+      .eq('round_id', roundId);
+
+    if (entries && entries.length > 0) {
+      const entryIds = entries.map(e => e.id);
+      await supabase
+        .from('votes')
+        .delete()
+        .in('entry_id', entryIds);
+
+      // 2. Zmaž entries a Storage súbory
+      for (const entry of entries) {
+        const { data: entryData } = await supabase
+          .from('entries')
+          .select('creative_url')
+          .eq('id', entry.id)
+          .single();
+        
+        if (entryData?.creative_url) {
+          try {
+            const parts = entryData.creative_url.split('/creatives/');
+            if (parts.length === 2) {
+              await supabase.storage
+                .from('creatives')
+                .remove([parts[1]]);
+            }
+          } catch (e) {
+            console.error('storage remove error:', e);
+          }
+        }
+      }
+
+      await supabase
+        .from('entries')
+        .delete()
+        .eq('round_id', roundId);
+    }
+
+    // 3. Zmaž samotné kolo
+    const { error } = await supabase
+      .from('rounds')
+      .delete()
+      .eq('id', roundId);
+
+    if (error) throw error;
+
+    setMessage(roundMsgEl, 'Kolo a všetko viazané bolo zmazané.', 'ok');
+    await loadRoundsForSelectedContest();
+    await loadResultsRounds();
+    await loadResultsEntries();
+  } catch (error) {
+    console.error('deleteRound error:', error);
+    setMessage(roundMsgEl, 'Chyba pri mazaní: ' + error.message, 'error');
+  }
+}
+
+async function editRound(roundId, currentName, currentStart, currentEnd) {
+  editState = { type: 'round', id: roundId, data: {} };
+  
+  // Konvertuj ISO na datetime-local format
+  const formatForInput = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toISOString().slice(0, 16);
+  };
+
+  const content = `
+    <label for="editRoundName">Názov kola</label>
+    <input id="editRoundName" type="text" value="${currentName || ''}" />
+    <label for="editRoundStart">Začiatok (voliteľné)</label>
+    <input id="editRoundStart" type="datetime-local" value="${formatForInput(currentStart)}" />
+    <label for="editRoundEnd">Koniec (voliteľné)</label>
+    <input id="editRoundEnd" type="datetime-local" value="${formatForInput(currentEnd)}" />
+  `;
+  showEditModal('Upraviť kolo', content);
+}
+
+async function deleteEntry(entryId, entryTitle, creativeUrl) {
+  if (!confirm(`Naozaj chceš zmazať kampaň "${entryTitle}"?`)) {
+    return;
+  }
+
+  try {
+    // 1. Zmaž votes
+    await supabase
+      .from('votes')
+      .delete()
+      .eq('entry_id', entryId);
+
+    // 2. Zmaž Storage súbor ak existuje
+    if (creativeUrl) {
+      try {
+        const parts = creativeUrl.split('/creatives/');
+        if (parts.length === 2) {
+          await supabase.storage
+            .from('creatives')
+            .remove([parts[1]]);
+        }
+      } catch (e) {
+        console.error('storage remove error:', e);
+      }
+    }
+
+    // 3. Zmaž entry
+    const { error } = await supabase
+      .from('entries')
+      .delete()
+      .eq('id', entryId);
+
+    if (error) throw error;
+
+    setMessage(resultsMsgEl, 'Kampaň zmazaná.', 'ok');
+    await loadResultsEntries();
+  } catch (error) {
+    console.error('deleteEntry error:', error);
+    setMessage(resultsMsgEl, 'Chyba pri mazaní: ' + error.message, 'error');
+  }
+}
+
+async function editEntry(entryId, currentTitle, currentClient, currentNotes) {
+  editState = { type: 'entry', id: entryId, data: {} };
+  const content = `
+    <label for="editEntryTitle">Názov kampane</label>
+    <input id="editEntryTitle" type="text" value="${currentTitle || ''}" />
+    <label for="editEntryClient">Klient</label>
+    <input id="editEntryClient" type="text" value="${currentClient || ''}" />
+    <label for="editEntryNotes">Poznámky</label>
+    <textarea id="editEntryNotes" style="width:100%; min-height:60px; padding:8px 10px; border-radius:4px; border:1px solid #ccc; font-size:14px; box-sizing:border-box;">${currentNotes || ''}</textarea>
+  `;
+  showEditModal('Upraviť kampaň', content);
 }
 
 async function ensureAdmin() {
@@ -85,7 +509,13 @@ async function loadContests() {
 
   data.forEach((contest) => {
     const li = document.createElement('li');
-    li.textContent = `${contest.name} (${contest.year || 'rok nešpecifikovaný'})`;
+    li.innerHTML = `
+      ${contest.name} (${contest.year || 'rok nešpecifikovaný'})
+      <div class="item-actions">
+        <button class="edit-btn" onclick="editContest('${contest.id}', '${(contest.name || '').replace(/'/g, "\\'")}', '${contest.year || ''}')">Upraviť</button>
+        <button class="delete-btn" onclick="deleteContest('${contest.id}', '${(contest.name || '').replace(/'/g, "\\'")}')">Zmazať</button>
+      </div>
+    `;
     contestListEl.appendChild(li);
 
     [categoryContestSelect, roundContestSelect, resultsContestSelect].forEach(sel => {
@@ -126,7 +556,13 @@ async function loadCategoriesForSelectedContest() {
 
   data.forEach((cat) => {
     const li = document.createElement('li');
-    li.textContent = cat.name;
+    li.innerHTML = `
+      ${cat.name}
+      <div class="item-actions">
+        <button class="edit-btn" onclick="editCategory('${cat.id}', '${(cat.name || '').replace(/'/g, "\\'")}')">Upraviť</button>
+        <button class="delete-btn" onclick="deleteCategory('${cat.id}', '${(cat.name || '').replace(/'/g, "\\'")}')">Zmazať</button>
+      </div>
+    `;
     categoryListEl.appendChild(li);
   });
 }
@@ -162,7 +598,13 @@ async function loadRoundsForSelectedContest() {
     const li = document.createElement('li');
     const start = r.start_at ? new Date(r.start_at).toLocaleString() : '–';
     const end = r.end_at ? new Date(r.end_at).toLocaleString() : '–';
-    li.textContent = `${r.name} (od ${start} do ${end})`;
+    li.innerHTML = `
+      ${r.name} (od ${start} do ${end})
+      <div class="item-actions">
+        <button class="edit-btn" onclick="editRound('${r.id}', '${(r.name || '').replace(/'/g, "\\'")}', '${r.start_at || ''}', '${r.end_at || ''}')">Upraviť</button>
+        <button class="delete-btn" onclick="deleteRound('${r.id}', '${(r.name || '').replace(/'/g, "\\'")}')">Zmazať</button>
+      </div>
+    `;
     roundListEl.appendChild(li);
   });
 }
@@ -276,7 +718,13 @@ async function loadResultsEntries() {
     const avg = row.avg_score !== null ? Number(row.avg_score).toFixed(2) : '–';
 
     const header = document.createElement('div');
-    header.innerHTML = `<strong>${row.title}</strong> — priemer: ${avg}/10, počet hlasov: ${row.votes_count}`;
+    header.innerHTML = `
+      <strong>${row.title}</strong> — priemer: ${avg}/10, počet hlasov: ${row.votes_count}
+      <div class="item-actions">
+        <button class="edit-btn" onclick="editEntry('${row.entry_id}', '${(row.title || '').replace(/'/g, "\\'")}', '', '')">Upraviť</button>
+        <button class="delete-btn" onclick="deleteEntry('${row.entry_id}', '${(row.title || '').replace(/'/g, "\\'")}', '')">Zmazať</button>
+      </div>
+    `;
     li.appendChild(header);
 
     const detailList = document.createElement('ul');
