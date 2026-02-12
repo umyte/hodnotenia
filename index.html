@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <title>Kampane – login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #fff;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 360px;
+    }
+    h1 {
+      font-size: 20px;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 4px;
+      border: none;
+      background: #0066ff;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .msg {
+      margin-top: 10px;
+      font-size: 13px;
+      min-height: 18px;
+    }
+    .msg.error { color: #c00; }
+    .msg.ok { color: #090; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Prihlásenie</h1>
+
+    <label for="role">Rola</label>
+    <select id="role">
+      <option value="agency">Agentúra</option>
+      <option value="judge">Porotca</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <label for="email">E‑mail</label>
+    <input id="email" type="email" placeholder="tvoj@mail.sk" />
+
+    <label for="password">Heslo</label>
+    <input id="password" type="password" placeholder="••••••••" />
+
+    <button id="loginBtn">Prihlásiť</button>
+<button id="registerBtn" style="margin-top: 8px; background:#444;">Registrovať nový účet</button>
+<div id="message" class="msg"></div>
+
+
+    <div id="message" class="msg"></div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin – súťaže a kategórie</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    header {
+      background: #222;
+      color: #fff;
+      padding: 12px 16px;
+    }
+    main {
+      max-width: 960px;
+      margin: 24px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    section {
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    input, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 4px;
+      background: #0066ff;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .msg {
+      margin-top: 8px;
+      font-size: 13px;
+      min-height: 18px;
+    }
+    .msg.error { color: #c00; }
+    .msg.ok { color: #090; }
+    ul {
+      padding-left: 18px;
+      font-size: 14px;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Admin dashboard</strong>
+  </header>
+
+  <main>
+    <section>
+      <h1>Súťaže</h1>
+      <label for="contestName">Názov súťaže</label>
+      <input id="contestName" type="text" placeholder="napr. Kampaň roka 2025" />
+
+      <label for="contestYear">Rok</label>
+      <input id="contestYear" type="number" placeholder="2025" />
+
+      <button id="createContestBtn">Vytvoriť súťaž</button>
+      <div id="contestMsg" class="msg"></div>
+
+      <h3>Existujúce súťaže</h3>
+      <ul id="contestList"></ul>
+    </section>
+
+    <section>
+      <h2>Kategórie</h2>
+
+      <label for="categoryContestSelect">Súťaž</label>
+      <select id="categoryContestSelect"></select>
+
+      <label for="categoryName">Názov kategórie</label>
+      <input id="categoryName" type="text" placeholder="napr. Online kampane" />
+
+      <button id="createCategoryBtn">Vytvoriť kategóriu</button>
+      <div id="categoryMsg" class="msg"></div>
+
+      <h3>Kategórie v súťaži</h3>
+      <ul id="categoryList"></ul>
+    </section>
+
+    <section>
+      <h2>Kolá</h2>
+
+      <label for="roundContestSelect">Súťaž</label>
+      <select id="roundContestSelect"></select>
+
+      <label for="roundName">Názov kola</label>
+      <input id="roundName" type="text" placeholder="napr. Nominácie, Finále" />
+
+      <label for="roundStart">Začiatok (voliteľné)</label>
+      <input id="roundStart" type="datetime-local" />
+
+      <label for="roundEnd">Koniec (voliteľné)</label>
+      <input id="roundEnd" type="datetime-local" />
+
+      <button id="createRoundBtn">Vytvoriť kolo</button>
+      <div id="roundMsg" class="msg"></div>
+
+      <h3>Kolá v súťaži</h3>
+      <ul id="roundList"></ul>
+    </section>
+
+<section>
+  <h2>Výsledky v kategórii</h2>
+
+  <label for="resultsContestSelect">Súťaž</label>
+  <select id="resultsContestSelect"></select>
+
+  <label for="resultsRoundSelect">Kolo</label>
+  <select id="resultsRoundSelect"></select>
+
+  <label for="resultsCategorySelect">Kategória</label>
+  <select id="resultsCategorySelect"></select>
+
+  <div id="resultsMsg" class="msg"></div>
+
+  <h3>Kampane v tejto kategórii</h3>
+  <ul id="resultsEntriesList"></ul>
+</section>
+
+
+  </main>
+
+  <script type="module" src="./admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <title>Agency – kampane</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    header {
+      background: #222;
+      color: #fff;
+      padding: 12px 16px;
+    }
+    main {
+      max-width: 800px;
+      margin: 24px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 22px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      background: #0066ff;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .msg {
+      margin-top: 10px;
+      font-size: 13px;
+      min-height: 18px;
+    }
+    .msg.error { color: #c00; }
+    .msg.ok { color: #090; }
+
+    .entries-list {
+      margin-top: 24px;
+      border-top: 1px solid #eee;
+      padding-top: 16px;
+    }
+    .entry-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    .entry-item strong {
+      display: inline-block;
+      min-width: 120px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Agency dashboard</strong>
+  </header>
+
+  <main>
+    <h1>Prihlásiť kampaň</h1>
+
+    <label for="contestSelect">Súťaž</label>
+    <select id="contestSelect"></select>
+
+    <label for="categorySelect">Kategória</label>
+    <select id="categorySelect"></select>
+
+    <label for="roundSelect">Kolo</label>
+    <select id="roundSelect"></select>
+
+    <label for="title">Názov kampane</label>
+    <input id="title" type="text" placeholder="Názov kampane" />
+
+    <label for="client">Klient</label>
+    <input id="client" type="text" placeholder="Názov klienta" />
+
+        <label for="mediaType">Typ média</label>
+    <select id="mediaType">
+      <option value="banner">Banner</option>
+      <option value="video">Video</option>
+      <option value="audio">Audio</option>
+    </select>
+
+    <label for="creativeFile">Súbor kreatívy (obrázok / video / audio)</label>
+    <input id="creativeFile" type="file" />
+    
+<label for="videoUrl">URL na video (YouTube/Vimeo, atď.)</label>
+<input id="videoUrl" type="url" placeholder="https://..." />
+
+    <label for="notes">Poznámky / popis</label>
+    <textarea id="notes" placeholder="Stručný popis kampane"></textarea>
+
+
+    <button id="saveEntryBtn">Uložiť kampaň</button>
+    <div id="message" class="msg"></div>
+
+<div class="entries-list">
+  <h2>Moje kampane</h2>
+  <div id="entriesContainer"></div>
+</div>
+
+  </main>
+
+  <script type="module" src="./agency.js"></script>
+</body>
+</html>
